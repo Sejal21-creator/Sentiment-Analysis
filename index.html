@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Review Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0f172a',
+                        cardBg: '#1e293b',
+                        pos: '#10b981',
+                        neu: '#f59e0b',
+                        neg: '#ef4444',
+                        primary: '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .tab-inactive { color: #94a3b8; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #cbd5e1; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-200 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center text-white shadow-lg">
+                <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-white">Sentiment AI</h1>
+        </div>
+        <div class="text-sm font-medium text-slate-400">Advanced Product Review Analytics</div>
+    </nav>
+
+    <div class="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full p-4 lg:p-6 gap-6">
+        
+        <!-- Sidebar -->
+        <aside class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-6">
+            <div class="glass-panel rounded-2xl p-6 shadow-xl border border-slate-700/50">
+                <h2 class="text-lg font-semibold text-white mb-4"><i class="fa-solid fa-filter mr-2"></i> Filters & Options</h2>
+                
+                <form id="uploadForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-2">Upload CSV File</label>
+                        <div class="relative flex items-center justify-center w-full">
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-600 border-dashed rounded-xl cursor-pointer hover:bg-slate-800/50 transition bg-slate-800/30">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                                    <p class="text-sm text-slate-400"><span class="font-semibold text-primary">Click to upload</span></p>
+                                    <p class="text-xs text-slate-500 mt-1">Must contain 'review' column</p>
+                                </div>
+                                <input type="file" id="csvFile" name="file" accept=".csv" class="hidden" />
+                            </label>
+                        </div>
+                        <p id="fileName" class="text-xs text-primary mt-2 hidden text-center truncate"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-2">Search Keyword</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500"></i>
+                            <input type="text" id="keyword" name="keyword" class="w-full bg-slate-800 border border-slate-600 text-white text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 outline-none transition" placeholder="e.g. camera, battery...">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-2">Sentiment Filter</label>
+                        <div class="flex flex-col gap-2">
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" value="Positive" class="sentiment-cb w-4 h-4 text-pos bg-slate-800 border-slate-600 rounded focus:ring-pos focus:ring-2" checked>
+                                <span class="text-sm text-slate-300 group-hover:text-white transition">Positive <span class="text-pos ml-1">😊</span></span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" value="Neutral" class="sentiment-cb w-4 h-4 text-neu bg-slate-800 border-slate-600 rounded focus:ring-neu focus:ring-2" checked>
+                                <span class="text-sm text-slate-300 group-hover:text-white transition">Neutral <span class="text-neu ml-1">😐</span></span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" value="Negative" class="sentiment-cb w-4 h-4 text-neg bg-slate-800 border-slate-600 rounded focus:ring-neg focus:ring-2" checked>
+                                <span class="text-sm text-slate-300 group-hover:text-white transition">Negative <span class="text-neg ml-1">😡</span></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="analyzeBtn" class="w-full text-white bg-gradient-to-r from-primary to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3 text-center transition shadow-lg flex justify-center items-center">
+                        <span>Analyze Bulk Data</span>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="glass-panel rounded-2xl p-6 shadow-xl border border-slate-700/50">
+                <h2 class="text-lg font-semibold text-white mb-4"><i class="fa-solid fa-keyboard mr-2"></i> Single Review</h2>
+                <textarea id="singleReviewText" rows="3" class="w-full bg-slate-800 border border-slate-600 text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 outline-none transition mb-3 placeholder-slate-500" placeholder="Type a review here..."></textarea>
+                <button id="analyzeSingleBtn" class="w-full text-white bg-slate-700 hover:bg-slate-600 border border-slate-600 focus:ring-4 focus:ring-slate-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition shadow flex justify-center items-center">
+                    Analyze Single
+                </button>
+                <div id="singleResult" class="mt-4 hidden p-3 rounded-lg bg-slate-800/50 border border-slate-700 text-sm">
+                    <!-- Single result injected here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0">
+
+            <!-- Tabs Header -->
+            <div class="glass-panel rounded-2xl border border-slate-700/50 mb-5 shadow-md overflow-hidden">
+                <div class="flex border-b border-slate-700">
+                    <button id="tab-btn-single" onclick="switchTab('single')" class="tab-btn flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all tab-active">
+                        📄 Single Review
+                    </button>
+                    <button id="tab-btn-bulk" onclick="switchTab('bulk')" class="tab-btn flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all tab-inactive">
+                        📊 Bulk Analysis
+                    </button>
+                    <button id="tab-btn-suggestions" onclick="switchTab('suggestions')" class="tab-btn flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all tab-inactive">
+                        💡 Suggestions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden flex-1 flex flex-col items-center justify-center py-24">
+                <div class="w-16 h-16 border-4 border-slate-700 border-t-primary rounded-full animate-spin mb-4"></div>
+                <h3 class="text-lg text-slate-300 font-medium">Processing Analytics...</h3>
+            </div>
+
+            <!-- TAB 1: Single Review -->
+            <div id="tab-single" class="tab-content flex-1 flex flex-col">
+                <div class="glass-panel rounded-2xl border border-slate-700/50 p-8 flex flex-col gap-5">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">🔎 Analyze Single Review</h2>
+                    <textarea id="singleReviewText" rows="5" class="w-full bg-slate-800 border border-slate-600 text-white text-sm rounded-xl focus:ring-primary focus:border-primary block p-4 outline-none transition placeholder-slate-500 resize-none" placeholder="Enter your review text here..."></textarea>
+                    <button id="analyzeSingleBtn" class="self-start text-white bg-gradient-to-r from-primary to-purple-600 hover:from-blue-600 hover:to-purple-700 font-semibold rounded-xl text-sm px-8 py-3 transition shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass"></i> Analyze Review
+                    </button>
+                    <div id="singleResult" class="hidden p-5 rounded-xl bg-slate-800/50 border border-slate-700 text-sm">
+                        <!-- Single result injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Bulk Analysis -->
+            <div id="tab-bulk" class="tab-content hidden flex-col gap-5">
+
+                <div id="bulkEmptyState" class="flex-1 flex flex-col items-center justify-center text-center glass-panel rounded-2xl border border-slate-700/50 p-16">
+                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-5 shadow-inner">
+                        <i class="fa-solid fa-chart-line text-4xl text-slate-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">No Data Analyzed Yet</h2>
+                    <p class="text-slate-400 max-w-md">Upload a CSV from the sidebar and click <strong class="text-primary">Analyze Bulk Data</strong> to generate insights.</p>
+                </div>
+
+                <div id="bulkDashboard" class="hidden flex-col gap-5">
+                    <!-- Metrics -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-panel rounded-xl p-5 border border-slate-700/50 relative overflow-hidden group">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-slate-700/20 rounded-full group-hover:scale-150 transition duration-500"></div>
+                            <p class="text-sm text-slate-400 font-medium mb-1">Total Reviews</p>
+                            <h3 class="text-3xl font-bold text-white" id="mTotal">-</h3>
+                        </div>
+                        <div class="glass-panel rounded-xl p-5 border border-slate-700/50 relative overflow-hidden group border-l-4 border-l-pos">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-pos/10 rounded-full group-hover:scale-150 transition duration-500"></div>
+                            <p class="text-sm text-slate-400 font-medium mb-1">Positive</p>
+                            <h3 class="text-3xl font-bold text-pos flex items-center gap-2"><span id="mPos">-</span> <span class="text-xl">😊</span></h3>
+                        </div>
+                        <div class="glass-panel rounded-xl p-5 border border-slate-700/50 relative overflow-hidden group border-l-4 border-l-neu">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-neu/10 rounded-full group-hover:scale-150 transition duration-500"></div>
+                            <p class="text-sm text-slate-400 font-medium mb-1">Neutral</p>
+                            <h3 class="text-3xl font-bold text-neu flex items-center gap-2"><span id="mNeu">-</span> <span class="text-xl">😐</span></h3>
+                        </div>
+                        <div class="glass-panel rounded-xl p-5 border border-slate-700/50 relative overflow-hidden group border-l-4 border-l-neg">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-neg/10 rounded-full group-hover:scale-150 transition duration-500"></div>
+                            <p class="text-sm text-slate-400 font-medium mb-1">Negative</p>
+                            <h3 class="text-3xl font-bold text-neg flex items-center gap-2"><span id="mNeg">-</span> <span class="text-xl">😡</span></h3>
+                        </div>
+                    </div>
+
+                    <!-- Pie Chart -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-700/50 flex flex-col items-center">
+                        <h3 class="text-base font-semibold text-white mb-4 self-start">Sentiment Distribution</h3>
+                        <div class="w-full max-w-[260px] mx-auto" style="height:260px; position:relative;">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Wordclouds -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-700/50">
+                        <h3 class="text-base font-semibold text-white mb-4"><i class="fa-solid fa-cloud text-primary mr-2"></i> Wordclouds by Sentiment</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                                <p class="text-xs font-semibold text-pos mb-2 text-center">Positive Reviews</p>
+                                <img id="wcPos" class="w-full rounded-lg object-contain bg-cardBg min-h-[100px]" src="" alt="Positive Wordcloud">
+                            </div>
+                            <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                                <p class="text-xs font-semibold text-neu mb-2 text-center">Neutral Reviews</p>
+                                <img id="wcNeu" class="w-full rounded-lg object-contain bg-cardBg min-h-[100px]" src="" alt="Neutral Wordcloud">
+                            </div>
+                            <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                                <p class="text-xs font-semibold text-neg mb-2 text-center">Negative Reviews</p>
+                                <img id="wcNeg" class="w-full rounded-lg object-contain bg-cardBg min-h-[100px]" src="" alt="Negative Wordcloud">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Suggestions -->
+            <div id="tab-suggestions" class="tab-content hidden flex-col gap-5">
+
+                <div id="suggestionsEmptyState" class="flex-1 flex flex-col items-center justify-center text-center glass-panel rounded-2xl border border-slate-700/50 p-16">
+                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-5 shadow-inner">
+                        <i class="fa-solid fa-lightbulb text-4xl text-slate-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">No Suggestions Yet</h2>
+                    <p class="text-slate-400 max-w-md">Analyze a CSV file from the sidebar to generate category insights and improvement suggestions.</p>
+                </div>
+
+                <div id="suggestionsDashboard" class="hidden flex-col gap-5">
+                    <!-- Category Bar Chart -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-700/50">
+                        <h3 class="text-base font-semibold text-white mb-4"><i class="fa-solid fa-bar-chart text-neg mr-2"></i> Most Complained Categories</h3>
+                        <div class="w-full relative" style="height: 220px;">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Suggestions List -->
+                    <div class="glass-panel rounded-2xl p-6 border border-slate-700/50 border-l-4 border-l-neu">
+                        <h3 class="text-base font-semibold text-white mb-4"><i class="fa-solid fa-lightbulb text-neu mr-2"></i> Improvement Suggestions</h3>
+                        <ul id="suggestionsList" class="space-y-3 text-sm text-slate-300">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- Script for interaction -->
+    <script>
+        const API_BASE = window.location.origin;
+        let pieChartInst = null;
+        let barChartInst = null;
+        let lastAnalysisData = null; // stores full analysis result for chatbot context
+
+        // --- Tab Switching ---
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
+            });
+            document.getElementById('tab-' + name).classList.remove('hidden');
+            document.getElementById('tab-btn-' + name).classList.add('tab-active');
+            document.getElementById('tab-btn-' + name).classList.remove('tab-inactive');
+        }
+
+        // --- File Upload Label ---
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const nameLabel = document.getElementById('fileName');
+            if(this.files[0]) {
+                nameLabel.textContent = this.files[0].name;
+                nameLabel.classList.remove('hidden');
+            } else {
+                nameLabel.classList.add('hidden');
+            }
+        });
+
+        // --- Single Review ---
+        document.getElementById('analyzeSingleBtn').addEventListener('click', async () => {
+            const text = document.getElementById('singleReviewText').value;
+            const resDiv = document.getElementById('singleResult');
+            const btn = document.getElementById('analyzeSingleBtn');
+            
+            if(!text.trim()) return alert("Enter review text");
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing...';
+            resDiv.classList.add('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/analyze_single`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text})
+                });
+                const data = await res.json();
+                
+                let color = data.sentiment === "Positive" ? "text-pos" : (data.sentiment === "Negative" ? "text-neg" : "text-neu");
+                let bg    = data.sentiment === "Positive" ? "bg-pos/10 border-pos/30" : (data.sentiment === "Negative" ? "bg-neg/10 border-neg/30" : "bg-neu/10 border-neu/30");
+
+                resDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-4 p-3 rounded-lg ${bg} border">
+                        <span class="font-medium text-slate-300 text-base">Sentiment Result:</span>
+                        <span class="font-bold ${color} text-2xl">${data.sentiment} ${data.emoji}</span>
+                    </div>
+                    ${data.wordcloud ? `
+                    <div>
+                        <p class="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">Word Cloud</p>
+                        <img src="data:image/png;base64,${data.wordcloud}" class="w-full rounded-xl border border-slate-700 bg-cardBg">
+                    </div>` : ''}
+                `;
+                resDiv.classList.remove('hidden');
+            } catch(e) {
+                alert("Error analyzing review. Is the backend running?");
+                console.error(e);
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Analyze Review';
+            }
+        });
+
+        // --- Bulk CSV Analysis ---
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('csvFile').files[0];
+            if(!file) return alert("Please upload a CSV file first");
+
+            const keyword = document.getElementById('keyword').value;
+            const cb = document.querySelectorAll('.sentiment-cb:checked');
+            const sentiments = Array.from(cb).map(i => i.value);
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("keyword_filter", keyword);
+            formData.append("sentiment_filter", JSON.stringify(sentiments));
+
+            // Hide all tab content, show loading
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('analyzeBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing...';
+
+            try {
+                const res = await fetch(`${API_BASE}/analyze_csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if(!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Upload failed");
+                }
+                
+                const data = await res.json();
+                renderDashboard(data);
+                
+                document.getElementById('loading').classList.add('hidden');
+                // Auto-switch to Bulk Analysis tab after analysis
+                switchTab('bulk');
+
+            } catch(e) {
+                alert(e.message);
+                document.getElementById('loading').classList.add('hidden');
+                switchTab('single');
+            } finally {
+                document.getElementById('analyzeBtn').innerHTML = '<span>Analyze Bulk Data</span>';
+            }
+        });
+
+        function renderDashboard(data) {
+            lastAnalysisData = data; // save for chatbot context
+
+            // Show bulk and suggestions panels, hide empty states
+            document.getElementById('bulkEmptyState').classList.add('hidden');
+            document.getElementById('bulkDashboard').classList.remove('hidden');
+            document.getElementById('bulkDashboard').classList.add('flex');
+            document.getElementById('suggestionsEmptyState').classList.add('hidden');
+            document.getElementById('suggestionsDashboard').classList.remove('hidden');
+            document.getElementById('suggestionsDashboard').classList.add('flex');
+
+            // Metrics
+            document.getElementById('mTotal').innerText = data.metrics.total;
+            document.getElementById('mPos').innerText = data.metrics.Positive;
+            document.getElementById('mNeu').innerText = data.metrics.Neutral;
+            document.getElementById('mNeg').innerText = data.metrics.Negative;
+
+            // Wordclouds
+            const setImg = (id, b64) => {
+                const el = document.getElementById(id);
+                if(b64) el.src = "data:image/png;base64," + b64;
+                else el.src = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="; // empty transparent
+            };
+            setImg('wcPos', data.wordclouds.Positive);
+            setImg('wcNeu', data.wordclouds.Neutral);
+            setImg('wcNeg', data.wordclouds.Negative);
+
+            // Suggestions
+            const list = document.getElementById('suggestionsList');
+            list.innerHTML = '';
+            if(data.suggestions.length === 0) {
+                list.innerHTML = '<li class="text-slate-400 italic">No major category issues detected in the negative reviews.</li>';
+            } else {
+                data.suggestions.forEach(s => {
+                    const li = document.createElement('li');
+                    li.className = "flex items-start gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700";
+                    li.innerHTML = `<span>${s}</span>`;
+                    list.appendChild(li);
+                });
+            }
+
+            // Pie Chart
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            if(pieChartInst) pieChartInst.destroy();
+            
+            const pData = data.pie_chart;
+            const labels = Object.keys(pData);
+            const values = Object.values(pData);
+            const colors = labels.map(l => l==='Positive'?'#10b981':l==='Negative'?'#ef4444':'#f59e0b');
+
+            pieChartInst = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 20, font: {family: 'Inter', size: 12} } }
+                    }
+                }
+            });
+
+            // Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if(barChartInst) barChartInst.destroy();
+
+            const cData = data.category_chart;
+            barChartInst = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: cData.labels,
+                    datasets: [{
+                        label: 'Negative Mentions',
+                        data: cData.values,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4,
+                        maxBarThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1 } },
+                        y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Chatbot Logic — runs after full DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatbotToggle = document.getElementById('chatbotToggle');
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            const chatbotClose  = document.getElementById('chatbotClose');
+            const chatForm      = document.getElementById('chatForm');
+            const chatInput     = document.getElementById('chatInput');
+            const chatMessages  = document.getElementById('chatMessages');
+
+            chatbotToggle.addEventListener('click', () => {
+                chatbotWindow.classList.toggle('hidden');
+            });
+
+            chatbotClose.addEventListener('click', () => {
+                chatbotWindow.classList.add('hidden');
+            });
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const msg = chatInput.value.trim();
+                if (!msg) return;
+
+                // User bubble
+                chatMessages.innerHTML += `<div class="bg-primary text-white rounded-lg rounded-tr-none p-3 max-w-[85%] self-end text-sm">${msg}</div>`;
+                chatInput.value = '';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Bot thinking bubble
+                const botId = 'bot-' + Date.now();
+                chatMessages.innerHTML += `<div id="${botId}" class="bg-slate-700 text-slate-200 rounded-lg rounded-tl-none p-3 max-w-[85%] self-start flex items-center gap-2 text-sm"><i class="fa-solid fa-spinner fa-spin"></i>&nbsp;Thinking...</div>`;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                try {
+                    const contextStr = Array.from(document.getElementById('suggestionsList').children)
+                        .map(li => li.innerText).join('\n');
+
+                    const payload = {
+                        message: msg,
+                        context: contextStr || "No data analyzed yet.",
+                        metrics: lastAnalysisData ? lastAnalysisData.metrics : {},
+                        categories: lastAnalysisData ? lastAnalysisData.category_chart : {},
+                        positive_categories: lastAnalysisData ? lastAnalysisData.positive_categories : {},
+                        neutral_categories: lastAnalysisData ? lastAnalysisData.neutral_categories : {}
+                    };
+
+                    const res = await fetch(`${API_BASE}/chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    document.getElementById(botId).innerHTML = data.reply;
+                } catch (err) {
+                    document.getElementById(botId).innerHTML = "⚠️ Could not connect to server. Make sure the backend is running.";
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        });
+    </script>
+
+    <!-- Chatbot UI -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button id="chatbotToggle" class="w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-600 transition">
+            <i class="fa-solid fa-robot text-2xl"></i>
+        </button>
+        <div id="chatbotWindow" class="hidden absolute bottom-20 right-0 w-80 h-96 glass-panel rounded-2xl shadow-2xl flex flex-col border border-slate-700 overflow-hidden">
+            <div class="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-white font-semibold flex items-center gap-2"><i class="fa-solid fa-robot text-primary"></i> Suggestion AI</h3>
+                <button id="chatbotClose" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col text-sm">
+                <div class="bg-slate-700 text-slate-200 rounded-lg rounded-tl-none p-3 max-w-[85%] self-start">
+                    Hello! I'm your AI Suggestion Bot. Analyze a CSV first, then ask me questions about the reviews!
+                </div>
+            </div>
+            <div class="p-3 bg-slate-800 border-t border-slate-700">
+                <form id="chatForm" class="flex gap-2">
+                    <input type="text" id="chatInput" class="flex-1 bg-slate-900 border border-slate-600 text-white text-sm rounded-lg p-2 outline-none focus:border-primary" placeholder="Ask a question...">
+                    <button type="submit" class="bg-primary text-white p-2 px-3 rounded-lg hover:bg-blue-600"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
